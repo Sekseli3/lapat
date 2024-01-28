@@ -6,17 +6,18 @@
 #include <vector>
 #include <string>
 
-const int BOUNDING_BOX_MARGIN = 90;
+const int BOUNDING_BOX_MARGIN = 80;
+//how large of a fraction has to be green
 const double GREEN_FRACTION_THRESHOLD = 0.9;
 const char QUIT_KEY = 'q';
 
 void processBoundingBox(const cv::Rect& bbox, const cv::Mat& greenMask, const std::vector<cv::Rect>& previousBboxes, cv::Mat& frame, std::vector<std::string>& json_strings) {
-    if (bbox.y - BOUNDING_BOX_MARGIN >= 0 && bbox.y + bbox.height + BOUNDING_BOX_MARGIN < greenMask.rows && bbox.x - BOUNDING_BOX_MARGIN >= 0 && bbox.x + bbox.width + BOUNDING_BOX_MARGIN < greenMask.cols) {
+    if (bbox.y - BOUNDING_BOX_MARGIN >= 0 && bbox.y + bbox.height + BOUNDING_BOX_MARGIN < greenMask.rows
+     && bbox.x - BOUNDING_BOX_MARGIN >= 0 && bbox.x + bbox.width + BOUNDING_BOX_MARGIN < greenMask.cols) {
         cv::Mat regionAbove = greenMask(cv::Rect(bbox.x, bbox.y - BOUNDING_BOX_MARGIN, bbox.width, BOUNDING_BOX_MARGIN));
         cv::Mat regionBelow = greenMask(cv::Rect(bbox.x, bbox.y + bbox.height, bbox.width, BOUNDING_BOX_MARGIN));
         cv::Mat regionLeft = greenMask(cv::Rect(bbox.x - BOUNDING_BOX_MARGIN, bbox.y, BOUNDING_BOX_MARGIN, bbox.height));
         cv::Mat regionRight = greenMask(cv::Rect(bbox.x + bbox.width, bbox.y, BOUNDING_BOX_MARGIN, bbox.height));
-
         double greenFractionAbove = cv::countNonZero(regionAbove) / static_cast<double>(regionAbove.total());
         double greenFractionBelow = cv::countNonZero(regionBelow) / static_cast<double>(regionBelow.total());
         double greenFractionLeft = cv::countNonZero(regionLeft) / static_cast<double>(regionLeft.total());
@@ -92,7 +93,7 @@ int main() {
     cv::Scalar lowerYellow(20, 40, 140);
     cv::Scalar upperYellow(30, 255, 255);
     //Lower and upper bounds for the green mask
-    cv::Scalar lowerGreen = cv::Scalar(30, 0, 30);
+    cv::Scalar lowerGreen = cv::Scalar(50, 0, 30);
     cv::Scalar upperGreen = cv::Scalar(170, 255, 255);
     //Vector for storing the JSON strings
     std::vector<std::string> json_strings;
@@ -125,7 +126,6 @@ int main() {
             cv::Rect bbox = cv::boundingRect(contour);
             //We call function to process bounding box
             for (const auto& contour : contours) {
-                cv::Rect bbox = cv::boundingRect(contour);
                 processBoundingBox(bbox, greenMask, previousBboxes, frame, json_strings);
             }
         }
