@@ -107,18 +107,16 @@ int main() {
         //convert the frame to HSV color space
         cv::Mat hsv;
         cv::cvtColor(frame, hsv, cv::COLOR_BGR2HSV);
-
         //Create a mask that selects the yellow pixels
         cv::Mat yellowMask;
         cv::inRange(hsv, lowerYellow, upperYellow, yellowMask);
         //Find the contours in the yellow mask
         std::vector<std::vector<cv::Point>> contours;
         cv::findContours(yellowMask, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
-
         // Create a mask that selects the green pixels
         cv::Mat greenMask;
-        cv::inRange(hsv, lowerGreen, upperGreen, greenMask); // define lowerGreen and upperGreen according to the green color range in HSV
-        
+        cv::inRange(hsv, lowerGreen, upperGreen, greenMask);
+
         //Store the locations of the bounding boxes from the previous frame
         static std::vector<cv::Rect> previousBboxes;
         // Draw bounding boxes around the contours
@@ -136,7 +134,6 @@ int main() {
         std::transform(contours.begin(), contours.end(), previousBboxes.begin(), [](const std::vector<cv::Point>& contour) {
         return cv::boundingRect(contour);
         });
-
         //Display the frame
         cv::imshow("Video", frame);
         //Press 'q' to quit
