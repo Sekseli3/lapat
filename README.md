@@ -14,8 +14,9 @@ protoc --cpp_out=. Rectangle.proto
 
 Buildaus tapahtuu pkg-config käyttämällä ja g++.
 
-buildaus:
+buildaus:¨
 g++ `pkg-config --cflags --libs opencv4 protobuf` -std=c++17 main.cpp Rectangle.pb.cc -o main
 
 Runaus:
+
 ./main
