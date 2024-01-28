@@ -55,11 +55,11 @@ for (const auto& contour : contours) {
     cv::Rect bbox = cv::boundingRect(contour);
 
 // Check if the regions around the bounding box are green
-if (bbox.y - 30 >= 0 && bbox.y + bbox.height + 30 < greenMask.rows && bbox.x - 30 >= 0 && bbox.x + bbox.width + 30 < greenMask.cols) {
-    cv::Mat regionAbove = greenMask(cv::Rect(bbox.x, bbox.y - 30, bbox.width, 30));
-    cv::Mat regionBelow = greenMask(cv::Rect(bbox.x, bbox.y + bbox.height, bbox.width, 30));
-    cv::Mat regionLeft = greenMask(cv::Rect(bbox.x - 30, bbox.y, 30, bbox.height));
-    cv::Mat regionRight = greenMask(cv::Rect(bbox.x + bbox.width, bbox.y, 30, bbox.height));
+if (bbox.y - 70 >= 0 && bbox.y + bbox.height + 70 < greenMask.rows && bbox.x - 70 >= 0 && bbox.x + bbox.width + 70 < greenMask.cols) {
+    cv::Mat regionAbove = greenMask(cv::Rect(bbox.x, bbox.y - 70, bbox.width, 70));
+    cv::Mat regionBelow = greenMask(cv::Rect(bbox.x, bbox.y + bbox.height, bbox.width, 70));
+    cv::Mat regionLeft = greenMask(cv::Rect(bbox.x - 70, bbox.y, 70, bbox.height));
+    cv::Mat regionRight = greenMask(cv::Rect(bbox.x + bbox.width, bbox.y, 70, bbox.height));
 
     double greenFractionAbove = cv::countNonZero(regionAbove) / static_cast<double>(regionAbove.total());
     double greenFractionBelow = cv::countNonZero(regionBelow) / static_cast<double>(regionBelow.total());
@@ -67,7 +67,7 @@ if (bbox.y - 30 >= 0 && bbox.y + bbox.height + 30 < greenMask.rows && bbox.x - 3
     double greenFractionRight = cv::countNonZero(regionRight) / static_cast<double>(regionRight.total());
 
     // If a significant fraction of the regions around the bounding box are green, consider the slab as lying on green ground
-    if (greenFractionAbove > 0.7 && greenFractionBelow > 0.7 && greenFractionLeft > 0.7 && greenFractionRight > 0.7) { // adjust these thresholds as needed
+    if (greenFractionAbove > 0.8 && greenFractionBelow > 0.8 && greenFractionLeft > 0.8 && greenFractionRight > 0.8) { // adjust these thresholds as needed
         // Calculate the aspect ratio and area of the bounding rectangle
         double aspectRatio = static_cast<double>(bbox.width) / bbox.height;
         double area = bbox.area();
@@ -80,10 +80,10 @@ if (bbox.y - 30 >= 0 && bbox.y + bbox.height + 30 < greenMask.rows && bbox.x - 3
         // If the bounding box has not moved, perform the remaining checks
         if (hasNotMoved) {
             // If the aspect ratio is close to 1 and the area is within a certain range, consider the contour as a potential rectangle
-            if (aspectRatio >= 3.9  && area > 40) {
+            if (aspectRatio >= 3  && area > 50) {
                 cv::rectangle(frame, bbox, cv::Scalar(0, 255, 0), 2);
             }
-            if (aspectRatio <= 1 && (area > 250 && area < 400)) {
+            if (aspectRatio <= 1 && (area > 270 && area < 410)) {
                 cv::rectangle(frame, bbox, cv::Scalar(0, 0, 255), 2);
             }
         }
