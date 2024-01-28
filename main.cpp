@@ -6,9 +6,76 @@
 #include <vector>
 #include <string>
 
-const int BOUNDING_BOX_MARGIN = 70;
+const int BOUNDING_BOX_MARGIN = 90;
 const double GREEN_FRACTION_THRESHOLD = 0.9;
 const char QUIT_KEY = 'q';
+
+void processBoundingBox(const cv::Rect& bbox, const cv::Mat& greenMask, const std::vector<cv::Rect>& previousBboxes, cv::Mat& frame, std::vector<std::string>& json_strings) {
+    if (bbox.y - BOUNDING_BOX_MARGIN >= 0 && bbox.y + bbox.height + BOUNDING_BOX_MARGIN < greenMask.rows && bbox.x - BOUNDING_BOX_MARGIN >= 0 && bbox.x + bbox.width + BOUNDING_BOX_MARGIN < greenMask.cols) {
+        cv::Mat regionAbove = greenMask(cv::Rect(bbox.x, bbox.y - BOUNDING_BOX_MARGIN, bbox.width, BOUNDING_BOX_MARGIN));
+        cv::Mat regionBelow = greenMask(cv::Rect(bbox.x, bbox.y + bbox.height, bbox.width, BOUNDING_BOX_MARGIN));
+        cv::Mat regionLeft = greenMask(cv::Rect(bbox.x - BOUNDING_BOX_MARGIN, bbox.y, BOUNDING_BOX_MARGIN, bbox.height));
+        cv::Mat regionRight = greenMask(cv::Rect(bbox.x + bbox.width, bbox.y, BOUNDING_BOX_MARGIN, bbox.height));
+
+        double greenFractionAbove = cv::countNonZero(regionAbove) / static_cast<double>(regionAbove.total());
+        double greenFractionBelow = cv::countNonZero(regionBelow) / static_cast<double>(regionBelow.total());
+        double greenFractionLeft = cv::countNonZero(regionLeft) / static_cast<double>(regionLeft.total());
+        double greenFractionRight = cv::countNonZero(regionRight) / static_cast<double>(regionRight.total());
+        //Calculate the average green fraction(areas with green pixels/ total area) around the bounding box
+        double greenFraction = (greenFractionAbove + greenFractionBelow + greenFractionLeft + greenFractionRight) / 4;
+        //if the average is above the treshold, check if the bounding box fills all other criteria
+        if (greenFraction > GREEN_FRACTION_THRESHOLD) {
+            //Calculate the aspect ratio and area of the bounding rectangle
+            double aspectRatio = static_cast<double>(bbox.width) / bbox.height;
+            double area = bbox.area();
+            //Check if the bounding box has not moved
+            bool hasNotMoved = std::any_of(previousBboxes.begin(), previousBboxes.end(), [&bbox](const cv::Rect& previousBbox) {
+                return cv::norm(bbox.tl() - previousBbox.tl()) == 0; // adjust this threshold as needed
+            });
+            //bounding box has not moved, perform the remaining checks
+            if (hasNotMoved) {
+                //If the aspect ratio is way more than 1 we know we are looking at a horizontally orientend rectangle
+                if (aspectRatio >= 3  && area > 50) {
+                    cv::rectangle(frame, bbox, cv::Scalar(0, 255, 0), 2);
+                    // Create a Rectangle protobuf object and set its fields
+                    Rectangle rectangle;
+                    rectangle.set_x(bbox.x);
+                    rectangle.set_y(bbox.y);
+                    rectangle.set_angle(0); //Angle with X-axis is 0 for green
+                    // Serialize the Rectangle object to a JSON string
+                    google::protobuf::util::JsonPrintOptions options;
+                    options.always_print_primitive_fields = true; //Without this angle 0 will not be shown
+                    std::string json_string;
+                    absl::Status status = google::protobuf::util::MessageToJsonString(rectangle, &json_string, options);
+                    if (!status.ok()) {
+                        std::cerr << "Failed to convert to JSON: " << status.ToString() << std::endl;
+                    } else {
+                        json_strings.push_back(json_string);
+                    }
+                }
+                //If aspectRation less than 1 we are looking at a vertically oriented rectangle
+                if (aspectRatio <= 1 && (area > 250 && area < 400)) {
+                    cv::rectangle(frame, bbox, cv::Scalar(0, 0, 255), 2);
+                    //Create a Rectangle protobuf object and set its fields
+                    Rectangle rectangle;
+                    rectangle.set_x(bbox.x);
+                    rectangle.set_y(bbox.y);
+                    rectangle.set_angle(90); // Angle is 90 for red
+                    //Serialize the Rectangle object to a JSON string
+                    google::protobuf::util::JsonPrintOptions options;
+                    options.always_print_primitive_fields = true;
+                    std::string json_string;
+                    absl::Status status = google::protobuf::util::MessageToJsonString(rectangle, &json_string, options);
+                    if (!status.ok()) {
+                        std::cerr << "Failed to convert message to JSON: " << status.ToString() << std::endl;
+                    } else {
+                        json_strings.push_back(json_string);
+                    }
+                }
+            }
+        }
+    }
+}
 
 int main() {
     //Open the video file
@@ -58,73 +125,12 @@ int main() {
         for (const auto& contour : contours) {
             // Calculate the bounding rectangle of the contour
             cv::Rect bbox = cv::boundingRect(contour);
-            // Check if the regions around the bounding box are green
-            if (bbox.y - BOUNDING_BOX_MARGIN >= 0 && bbox.y + bbox.height + BOUNDING_BOX_MARGIN < greenMask.rows && bbox.x - BOUNDING_BOX_MARGIN >= 0 && bbox.x + bbox.width + BOUNDING_BOX_MARGIN < greenMask.cols) {
-                cv::Mat regionAbove = greenMask(cv::Rect(bbox.x, bbox.y - BOUNDING_BOX_MARGIN, bbox.width, BOUNDING_BOX_MARGIN));
-                cv::Mat regionBelow = greenMask(cv::Rect(bbox.x, bbox.y + bbox.height, bbox.width, BOUNDING_BOX_MARGIN));
-                cv::Mat regionLeft = greenMask(cv::Rect(bbox.x - BOUNDING_BOX_MARGIN, bbox.y, BOUNDING_BOX_MARGIN, bbox.height));
-                cv::Mat regionRight = greenMask(cv::Rect(bbox.x + bbox.width, bbox.y, BOUNDING_BOX_MARGIN, bbox.height));
-
-                double greenFractionAbove = cv::countNonZero(regionAbove) / static_cast<double>(regionAbove.total());
-                double greenFractionBelow = cv::countNonZero(regionBelow) / static_cast<double>(regionBelow.total());
-                double greenFractionLeft = cv::countNonZero(regionLeft) / static_cast<double>(regionLeft.total());
-                double greenFractionRight = cv::countNonZero(regionRight) / static_cast<double>(regionRight.total());
-                //Calculate the average green fraction(areas with green pixels/ total area) around the bounding box
-                double greenFraction = (greenFractionAbove + greenFractionBelow + greenFractionLeft + greenFractionRight) / 4;
-                //if the average is above the treshold, check if the bounding box fills all other criteria
-                if (greenFraction > GREEN_FRACTION_THRESHOLD) {
-                    //Calculate the aspect ratio and area of the bounding rectangle
-                    double aspectRatio = static_cast<double>(bbox.width) / bbox.height;
-                    double area = bbox.area();
-                    //Check if the bounding box has not moved
-                    bool hasNotMoved = std::any_of(previousBboxes.begin(), previousBboxes.end(), [&bbox](const cv::Rect& previousBbox) {
-                        return cv::norm(bbox.tl() - previousBbox.tl()) == 0; // adjust this threshold as needed
-                    });
-                    //bounding box has not moved, perform the remaining checks
-                    if (hasNotMoved) {
-                        //If the aspect ratio is way more than 1 we know we are looking at a horizontally orientend rectangle
-                        if (aspectRatio >= 3  && area > 50) {
-                            cv::rectangle(frame, bbox, cv::Scalar(0, 255, 0), 2);
-                            // Create a Rectangle protobuf object and set its fields
-                            Rectangle rectangle;
-                            rectangle.set_x(bbox.x);
-                            rectangle.set_y(bbox.y);
-                            rectangle.set_angle(0); //Angle with X-axis is 0 for green
-                            // Serialize the Rectangle object to a JSON string
-                            google::protobuf::util::JsonPrintOptions options;
-                            options.always_print_primitive_fields = true; //Without this angle 0 will not be shown
-                            std::string json_string;
-                            absl::Status status = google::protobuf::util::MessageToJsonString(rectangle, &json_string, options);
-                            if (!status.ok()) {
-                                std::cerr << "Failed to convert to JSON: " << status.ToString() << std::endl;
-                            } else {
-                                json_strings.push_back(json_string);
-                            }
-                        }
-                        //If aspectRation less than 1 we are looking at a vertically oriented rectangle
-                        if (aspectRatio <= 1 && (area > 270 && area < 410)) {
-                            cv::rectangle(frame, bbox, cv::Scalar(0, 0, 255), 2);
-                            //Create a Rectangle protobuf object and set its fields
-                            Rectangle rectangle;
-                            rectangle.set_x(bbox.x);
-                            rectangle.set_y(bbox.y);
-                            rectangle.set_angle(90); // Angle is 90 for red
-                            //Serialize the Rectangle object to a JSON string
-                            google::protobuf::util::JsonPrintOptions options;
-                            options.always_print_primitive_fields = true;
-                            std::string json_string;
-                            absl::Status status = google::protobuf::util::MessageToJsonString(rectangle, &json_string, options);
-                            if (!status.ok()) {
-                                std::cerr << "Failed to convert message to JSON: " << status.ToString() << std::endl;
-                            } else {
-                                json_strings.push_back(json_string);
-                            }
-                        }
-                    }
-                }
+            //We call function to process bounding box
+            for (const auto& contour : contours) {
+                cv::Rect bbox = cv::boundingRect(contour);
+                processBoundingBox(bbox, greenMask, previousBboxes, frame, json_strings);
             }
         }
-
         //Update the locations of the bounding boxes for the next frame
         previousBboxes = std::vector<cv::Rect>(contours.size());
         std::transform(contours.begin(), contours.end(), previousBboxes.begin(), [](const std::vector<cv::Point>& contour) {
