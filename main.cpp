@@ -70,6 +70,7 @@ void processBoundingBox(const cv::Rect& bbox, const cv::Mat& greenMask, const st
                     if (!status.ok()) {
                         std::cerr << "Failed to convert message to JSON: " << status.ToString() << std::endl;
                     } else {
+                        //Add the JSON string to the vector
                         json_strings.push_back(json_string);
                     }
                 }
