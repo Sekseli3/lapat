@@ -13,7 +13,6 @@ const char QUIT_KEY = 'q';
 int main() {
     //Open the video file
     cv::VideoCapture cap("/Users/akselituominen/Desktop/larpake/video.mkv");
-
     //Check if successful
     if(!cap.isOpened()) {
         std::cout << "Could not open the video file" << std::endl;
@@ -21,7 +20,6 @@ int main() {
     }
     //Create display window
     cv::namedWindow("Video", cv::WINDOW_AUTOSIZE);
-
     //Define the color range, (neon-ish yellow)
     //ottaa kaikki läpät(ja muutakin) arvoilla 15-45, 50-255, 50-255
     cv::Scalar lowerYellow(20, 40, 140);
@@ -29,7 +27,6 @@ int main() {
     //Lower and upper bounds for the green mask
     cv::Scalar lowerGreen = cv::Scalar(30, 0, 30);
     cv::Scalar upperGreen = cv::Scalar(170, 255, 255);
-
     //Vector for storing the JSON strings
     std::vector<std::string> json_strings;
 
@@ -47,23 +44,20 @@ int main() {
         //Create a mask that selects the yellow pixels
         cv::Mat yellowMask;
         cv::inRange(hsv, lowerYellow, upperYellow, yellowMask);
-
         //Find the contours in the yellow mask
         std::vector<std::vector<cv::Point>> contours;
         cv::findContours(yellowMask, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
 
-        //Store the locations of the bounding boxes from the previous frame
-        static std::vector<cv::Rect> previousBboxes;
-
         // Create a mask that selects the green pixels
         cv::Mat greenMask;
         cv::inRange(hsv, lowerGreen, upperGreen, greenMask); // define lowerGreen and upperGreen according to the green color range in HSV
-
+        
+        //Store the locations of the bounding boxes from the previous frame
+        static std::vector<cv::Rect> previousBboxes;
         // Draw bounding boxes around the contours
         for (const auto& contour : contours) {
             // Calculate the bounding rectangle of the contour
             cv::Rect bbox = cv::boundingRect(contour);
-
             // Check if the regions around the bounding box are green
             if (bbox.y - BOUNDING_BOX_MARGIN >= 0 && bbox.y + bbox.height + BOUNDING_BOX_MARGIN < greenMask.rows && bbox.x - BOUNDING_BOX_MARGIN >= 0 && bbox.x + bbox.width + BOUNDING_BOX_MARGIN < greenMask.cols) {
                 cv::Mat regionAbove = greenMask(cv::Rect(bbox.x, bbox.y - BOUNDING_BOX_MARGIN, bbox.width, BOUNDING_BOX_MARGIN));
@@ -101,7 +95,6 @@ int main() {
                             options.always_print_primitive_fields = true; //Without this angle 0 will not be shown
                             std::string json_string;
                             absl::Status status = google::protobuf::util::MessageToJsonString(rectangle, &json_string, options);
-
                             if (!status.ok()) {
                                 std::cerr << "Failed to convert to JSON: " << status.ToString() << std::endl;
                             } else {
@@ -116,13 +109,11 @@ int main() {
                             rectangle.set_x(bbox.x);
                             rectangle.set_y(bbox.y);
                             rectangle.set_angle(90); // Angle is 90 for red
-
                             //Serialize the Rectangle object to a JSON string
                             google::protobuf::util::JsonPrintOptions options;
                             options.always_print_primitive_fields = true;
                             std::string json_string;
                             absl::Status status = google::protobuf::util::MessageToJsonString(rectangle, &json_string, options);
-
                             if (!status.ok()) {
                                 std::cerr << "Failed to convert message to JSON: " << status.ToString() << std::endl;
                             } else {
@@ -142,12 +133,11 @@ int main() {
 
         //Display the frame
         cv::imshow("Video", frame);
-
         //Press 'q' to quit
         if(cv::waitKey(1) == QUIT_KEY)
             break;
     }
-    //Write the JSON strings to a file
+    //After loop write the JSON strings to a file
     std::ofstream file("rectangles.json", std::ios::app);
     for (const auto& json_string : json_strings) {
         file << json_string << std::endl;
