@@ -29,3 +29,5 @@ Runaus:
 ```bash
 ./main
 ```
+## toiminta
+Perustuu neljään tarkastukseen. 1. onko alue liikkunut viime framesta 2. onko muoto oikea 3. onko muoto oikean kokoinen 4 onko läpyskä vihreällä taustalla(maassa) eikä esim kädessä
