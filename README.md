@@ -3,9 +3,13 @@
 ## Riippuvuudet
 Ohjelma käyttää OpenCV4, protobuf, abseil ja pkg-config kirjastoja
 Lataukset:
+
 brew install opencv
+
 brew install protobuf
+
 brew install abseil
+
 brew install pkg-config
 
 ## Buildaus
