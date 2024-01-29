@@ -31,6 +31,8 @@ Runaus:
 ```bash
 ./main
 ```
+Kun ohjelma on runannut, niin directoriin on luotu rectangles.JSON , missä lärpäkkeiden vasempien yläkulmien koordinaatit ja kulma.
+Jos lärpäke on pystysuorassa sen kulmaksi sanotaan 90 ja jos vaakasuorasti niin kulmaksi 0
 ## toiminta
 Perustuu neljään tarkastukseen. 1. onko alue liikkunut viime framesta 2. onko muoto oikea 3. onko muoto oikean kokoinen 4 onko läpyskä vihreällä taustalla(maassa) eikä esim kädessä
-Jos lärpäke on pystysuorassa sen kulmaksi sanotaan 90 ja jos vaakasuorasti niin kulmaksi 0
+
