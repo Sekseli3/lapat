@@ -33,5 +33,4 @@ Runaus:
 ```
 ## toiminta
 Perustuu neljään tarkastukseen. 1. onko alue liikkunut viime framesta 2. onko muoto oikea 3. onko muoto oikean kokoinen 4 onko läpyskä vihreällä taustalla(maassa) eikä esim kädessä
-
-Ohjelmaa voisi nopeuttaa jos muokkaisi video kokoa tai ei analyosisi jokaista framea.
+Jos lärpäke on pystysuorassa sen kulmaksi sanotaan 90 ja jos vaakasuorasti niin kulmaksi 0
