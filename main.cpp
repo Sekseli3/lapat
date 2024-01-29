@@ -106,7 +106,6 @@ int main() {
     //Create display window
     cv::namedWindow("Video", cv::WINDOW_AUTOSIZE);
     //Define the color range, (neon-ish yellow)
-    //ottaa kaikki läpät(ja muutakin) arvoilla 15-45, 50-255, 50-255
     cv::Scalar lowerYellow(20, 40, 140);
     cv::Scalar upperYellow(30, 200, 255);
     //Lower and upper bounds for the green mask
