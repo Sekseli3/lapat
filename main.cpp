@@ -6,11 +6,18 @@
 #include <vector>
 #include <string>
 
+//Larpakkeiden tunnistusohjelma
+//Ohjelma tunnistaa videosta larpakkeet ja tallentaa niiden sijainnit JSON-tiedostoon
+//Perus toiminta perustuu keltaisen värin löytämissen ja sitten lisätarkastuskiin.
+//Lisätarkastuksissa tarkastetaan onko keltaisen ympärillä vihreää,onko seliikkunut ja onko keltaisen koko ja muoto oikea
+
+//Define constants
 const std::string VIDEO_PATH = "/Users/akselituominen/Desktop/larpake/video.mkv";
 const int BOUNDING_BOX_MARGIN = 80;
 //how large of a fraction has to be green
 const double GREEN_FRACTION_THRESHOLD = 0.9;
 const char QUIT_KEY = 'q';
+
 //function to calculate the green fraction for a given region
 double calculateGreenFraction(const cv::Mat& region) {
     return cv::countNonZero(region) / static_cast<double>(region.total());
@@ -19,7 +26,7 @@ double calculateGreenFraction(const cv::Mat& region) {
 cv::Mat getRegion(const cv::Mat& greenMask, const cv::Rect& bbox, int dx, int dy, int width, int height) {
     return greenMask(cv::Rect(bbox.x + dx, bbox.y + dy, width, height));
 }
-
+//function to process a bounding box
 void processBoundingBox(const cv::Rect& bbox, const cv::Mat& greenMask, const std::vector<cv::Rect>& previousBboxes, cv::Mat& frame) {
     if (bbox.y - BOUNDING_BOX_MARGIN >= 0 && bbox.y + bbox.height + BOUNDING_BOX_MARGIN < greenMask.rows
     && bbox.x - BOUNDING_BOX_MARGIN >= 0 && bbox.x + bbox.width + BOUNDING_BOX_MARGIN < greenMask.cols) {
