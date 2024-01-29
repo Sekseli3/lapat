@@ -56,7 +56,7 @@ void processBoundingBox(const cv::Rect& bbox, const cv::Mat& greenMask, const st
                     Rectangle rectangle;
                     rectangle.set_x(bbox.x);
                     rectangle.set_y(bbox.y);
-                    rectangle.set_angle(0); //Angle with X-axis is 0 for green
+                    rectangle.set_angle(0); //Angle with X-axis is 0 for horizontal läpsykkä
                     // Serialize the Rectangle object to a JSON string
                     google::protobuf::util::JsonPrintOptions options;
                     options.always_print_primitive_fields = true; //Without this angle 0 will not be shown
@@ -65,7 +65,7 @@ void processBoundingBox(const cv::Rect& bbox, const cv::Mat& greenMask, const st
                     if (!status.ok()) {
                         std::cerr << "Failed to convert to JSON: " << status.ToString() << std::endl;
                     } else {
-                        //Add to file
+                        //All requirements passed, lets write to file
                         std::ofstream file("rectangles.json", std::ios::app);
                         file << json_string << std::endl;
                     }
@@ -77,7 +77,7 @@ void processBoundingBox(const cv::Rect& bbox, const cv::Mat& greenMask, const st
                     Rectangle rectangle;
                     rectangle.set_x(bbox.x);
                     rectangle.set_y(bbox.y);
-                    rectangle.set_angle(90); // Angle is 90 for red
+                    rectangle.set_angle(90); // Angle is 90 for vertical läpyskä
                     //Serialize the Rectangle object to a JSON string
                     google::protobuf::util::JsonPrintOptions options;
                     options.always_print_primitive_fields = true;
@@ -86,7 +86,7 @@ void processBoundingBox(const cv::Rect& bbox, const cv::Mat& greenMask, const st
                     if (!status.ok()) {
                         std::cerr << "Failed to convert message to JSON: " << status.ToString() << std::endl;
                     } else {
-                        //Add to file
+                        //All requirements passed, lets write to file
                         std::ofstream file("rectangles.json", std::ios::app);
                         file << json_string << std::endl;
                     }
