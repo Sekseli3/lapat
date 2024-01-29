@@ -6,35 +6,42 @@
 #include <vector>
 #include <string>
 
+const std::string VIDEO_PATH = "/Users/akselituominen/Desktop/larpake/video.mkv";
 const int BOUNDING_BOX_MARGIN = 80;
 //how large of a fraction has to be green
 const double GREEN_FRACTION_THRESHOLD = 0.9;
 const char QUIT_KEY = 'q';
+//function to calculate the green fraction for a given region
+double calculateGreenFraction(const cv::Mat& region) {
+    return cv::countNonZero(region) / static_cast<double>(region.total());
+}
+//function to get a region from the green mask
+cv::Mat getRegion(const cv::Mat& greenMask, const cv::Rect& bbox, int dx, int dy, int width, int height) {
+    return greenMask(cv::Rect(bbox.x + dx, bbox.y + dy, width, height));
+}
 
-void processBoundingBox(const cv::Rect& bbox, const cv::Mat& greenMask, const std::vector<cv::Rect>& previousBboxes, cv::Mat& frame, std::vector<std::string>& json_strings) {
+void processBoundingBox(const cv::Rect& bbox, const cv::Mat& greenMask, const std::vector<cv::Rect>& previousBboxes, cv::Mat& frame) {
     if (bbox.y - BOUNDING_BOX_MARGIN >= 0 && bbox.y + bbox.height + BOUNDING_BOX_MARGIN < greenMask.rows
-     && bbox.x - BOUNDING_BOX_MARGIN >= 0 && bbox.x + bbox.width + BOUNDING_BOX_MARGIN < greenMask.cols) {
-        cv::Mat regionAbove = greenMask(cv::Rect(bbox.x, bbox.y - BOUNDING_BOX_MARGIN, bbox.width, BOUNDING_BOX_MARGIN));
-        cv::Mat regionBelow = greenMask(cv::Rect(bbox.x, bbox.y + bbox.height, bbox.width, BOUNDING_BOX_MARGIN));
-        cv::Mat regionLeft = greenMask(cv::Rect(bbox.x - BOUNDING_BOX_MARGIN, bbox.y, BOUNDING_BOX_MARGIN, bbox.height));
-        cv::Mat regionRight = greenMask(cv::Rect(bbox.x + bbox.width, bbox.y, BOUNDING_BOX_MARGIN, bbox.height));
-        double greenFractionAbove = cv::countNonZero(regionAbove) / static_cast<double>(regionAbove.total());
-        double greenFractionBelow = cv::countNonZero(regionBelow) / static_cast<double>(regionBelow.total());
-        double greenFractionLeft = cv::countNonZero(regionLeft) / static_cast<double>(regionLeft.total());
-        double greenFractionRight = cv::countNonZero(regionRight) / static_cast<double>(regionRight.total());
+    && bbox.x - BOUNDING_BOX_MARGIN >= 0 && bbox.x + bbox.width + BOUNDING_BOX_MARGIN < greenMask.cols) {
+        // Calculate the green fraction for each region
+        double greenFractionAbove = calculateGreenFraction(getRegion(greenMask, bbox, 0, -BOUNDING_BOX_MARGIN, bbox.width, BOUNDING_BOX_MARGIN));
+        double greenFractionBelow = calculateGreenFraction(getRegion(greenMask, bbox, 0, bbox.height, bbox.width, BOUNDING_BOX_MARGIN));
+        double greenFractionLeft = calculateGreenFraction(getRegion(greenMask, bbox, -BOUNDING_BOX_MARGIN, 0, BOUNDING_BOX_MARGIN, bbox.height));
+        double greenFractionRight = calculateGreenFraction(getRegion(greenMask, bbox, bbox.width, 0, BOUNDING_BOX_MARGIN, bbox.height));
+
         //Calculate the average green fraction(areas with green pixels/ total area) around the bounding box
         double greenFraction = (greenFractionAbove + greenFractionBelow + greenFractionLeft + greenFractionRight) / 4;
         //if the average is above the treshold, check if the bounding box fills all other criteria
         if (greenFraction > GREEN_FRACTION_THRESHOLD) {
-            //Calculate the aspect ratio and area of the bounding rectangle
-            double aspectRatio = static_cast<double>(bbox.width) / bbox.height;
-            double area = bbox.area();
             //Check if the bounding box has not moved
             bool hasNotMoved = std::any_of(previousBboxes.begin(), previousBboxes.end(), [&bbox](const cv::Rect& previousBbox) {
                 return cv::norm(bbox.tl() - previousBbox.tl()) == 0; // adjust this threshold as needed
             });
             //bounding box has not moved, perform the remaining checks
             if (hasNotMoved) {
+                //Calculate the aspect ratio and area of the bounding rectangle
+                double aspectRatio = static_cast<double>(bbox.width) / bbox.height;
+                double area = bbox.area();
                 //If the aspect ratio is way more than 1 we know we are looking at a horizontally orientend rectangle
                 if (aspectRatio >= 3  && area > 50) {
                     cv::rectangle(frame, bbox, cv::Scalar(0, 255, 0), 2);
@@ -51,11 +58,12 @@ void processBoundingBox(const cv::Rect& bbox, const cv::Mat& greenMask, const st
                     if (!status.ok()) {
                         std::cerr << "Failed to convert to JSON: " << status.ToString() << std::endl;
                     } else {
-                        json_strings.push_back(json_string);
+                        std::ofstream file("rectangles.json", std::ios::app);
+                        file << json_string << std::endl;
                     }
                 }
                 //If aspectRation less than 1 we are looking at a vertically oriented rectangle
-                if (aspectRatio <= 1 && (area > 250 && area < 400)) {
+                else if (aspectRatio <= 1 && (area > 250 && area < 400)) {
                     cv::rectangle(frame, bbox, cv::Scalar(0, 0, 255), 2);
                     //Create a Rectangle protobuf object and set its fields
                     Rectangle rectangle;
@@ -71,7 +79,8 @@ void processBoundingBox(const cv::Rect& bbox, const cv::Mat& greenMask, const st
                         std::cerr << "Failed to convert message to JSON: " << status.ToString() << std::endl;
                     } else {
                         //Add the JSON string to the vector
-                        json_strings.push_back(json_string);
+                        std::ofstream file("rectangles.json", std::ios::app);
+                        file << json_string << std::endl;
                     }
                 }
             }
@@ -80,8 +89,8 @@ void processBoundingBox(const cv::Rect& bbox, const cv::Mat& greenMask, const st
 }
 
 int main() {
-    //Open the video file
-    cv::VideoCapture cap("/Users/akselituominen/Desktop/larpake/video.mkv");
+    //Open the video file, change the path to the video file as needed
+    cv::VideoCapture cap(VIDEO_PATH);
     //Check if successful
     if(!cap.isOpened()) {
         std::cout << "Could not open the video file" << std::endl;
@@ -92,13 +101,12 @@ int main() {
     //Define the color range, (neon-ish yellow)
     //ottaa kaikki läpät(ja muutakin) arvoilla 15-45, 50-255, 50-255
     cv::Scalar lowerYellow(20, 40, 140);
-    cv::Scalar upperYellow(30, 255, 255);
+    cv::Scalar upperYellow(30, 200, 255);
     //Lower and upper bounds for the green mask
     cv::Scalar lowerGreen = cv::Scalar(50, 0, 30);
     cv::Scalar upperGreen = cv::Scalar(170, 255, 255);
     //Vector for storing the JSON strings
-    std::vector<std::string> json_strings;
-
+    static std::vector<cv::Rect> previousBboxes;
     while(true) {
         cv::Mat frame;
         //Capture frame-by-frame
@@ -118,33 +126,25 @@ int main() {
         // Create a mask that selects the green pixels
         cv::Mat greenMask;
         cv::inRange(hsv, lowerGreen, upperGreen, greenMask);
-
-        //Store the locations of the bounding boxes from the previous frame
-        static std::vector<cv::Rect> previousBboxes;
         // Draw bounding boxes around the contours
-        for (const auto& contour : contours) {
-            // Calculate the bounding rectangle of the contour
-            cv::Rect bbox = cv::boundingRect(contour);
-            //We call function to process bounding box
-            for (const auto& contour : contours) {
-                processBoundingBox(bbox, greenMask, previousBboxes, frame, json_strings);
-            }
-        }
-        //Update the locations of the bounding boxes for the next frame
-        previousBboxes = std::vector<cv::Rect>(contours.size());
-        std::transform(contours.begin(), contours.end(), previousBboxes.begin(), [](const std::vector<cv::Point>& contour) {
-        return cv::boundingRect(contour);
+        // Calculate bounding boxes for each contour
+        std::vector<cv::Rect> bboxes(contours.size());
+        std::transform(contours.begin(), contours.end(), bboxes.begin(), [](const std::vector<cv::Point>& contour) {
+            return cv::boundingRect(contour);
         });
+        // Process each bounding box in parallel
+        cv::parallel_for_(cv::Range(0, bboxes.size()), [&](const cv::Range& range) {
+            for (int i = range.start; i < range.end; i++) {
+                processBoundingBox(bboxes[i], greenMask, previousBboxes, frame);
+            }
+        });
+        //Update the locations of the bounding boxes for the next frame
+        previousBboxes = bboxes;
         //Display the frame
         cv::imshow("Video", frame);
         //Press 'q' to quit
         if(cv::waitKey(1) == QUIT_KEY)
             break;
-    }
-    //After loop write the JSON strings to a file
-    std::ofstream file("rectangles.json", std::ios::app);
-    for (const auto& json_string : json_strings) {
-        file << json_string << std::endl;
     }
     //When everything done, release the video capture object
     cap.release();
