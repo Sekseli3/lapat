@@ -65,6 +65,7 @@ void processBoundingBox(const cv::Rect& bbox, const cv::Mat& greenMask, const st
                     if (!status.ok()) {
                         std::cerr << "Failed to convert to JSON: " << status.ToString() << std::endl;
                     } else {
+                        //Add to file
                         std::ofstream file("rectangles.json", std::ios::app);
                         file << json_string << std::endl;
                     }
@@ -85,7 +86,7 @@ void processBoundingBox(const cv::Rect& bbox, const cv::Mat& greenMask, const st
                     if (!status.ok()) {
                         std::cerr << "Failed to convert message to JSON: " << status.ToString() << std::endl;
                     } else {
-                        //Add the JSON string to the vector
+                        //Add to file
                         std::ofstream file("rectangles.json", std::ios::app);
                         file << json_string << std::endl;
                     }
